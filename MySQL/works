@@ -1,0 +1,73 @@
+use bikestores;
+
+create table ss_master_bikestores as 
+select distinct sc.customer_id,sc.first_name,sc.last_name,soi.order_id,st.store_id,st.store_name,
+soi.product_id,pp.product_name,pp.model_year,so.order_date,so.order_status,so.shipped_date,
+pp.brand_id,pb.brand_name,pp.category_id,pc.category_name,
+ss.staff_id,soi.item_id,soi.quantity,soi.list_price
+from sales.order_items as soi
+left outer join sales.orders as so on soi.order_id=so.order_id
+left outer join production.stocks as ps on soi.product_id=ps.product_id
+left outer join production.products as pp on soi.product_id=pp.product_id
+left outer join production.categories as pc on pp.category_id=pc.category_id
+left outer join production.brands as pb on pp.brand_id=pb.brand_id
+left outer join sales.customers as sc on so.customer_id=sc.customer_id
+left outer join sales.staffs as ss on so.staff_id=so.staff_id
+left outer join sales.stores as st on so.store_id=st.store_id;
+
+select * from ss_master_bikestores;
+select distinct count(*) from ss_master_bikestores;
+-- orders placed by customers
+select customer_id,first_name,count(distinct order_id) as total_orders
+from ss_master_bikestores
+group by 1,2
+order by 1,2,3;
+
+select customer_id,first_name,count(distinct order_id) as total_orders
+from ss_master_bikestores
+group by 1,2
+having total_orders>=2
+order by 1,2,3;
+
+select product_name, count(distinct order_id) as tot_ord
+from ss_master_bikestores
+group by 1
+order by 2 desc;
+
+create table ss_master_bikestores_final as 
+select distinct sc.customer_id,sc.first_name,sc.last_name,soi.order_id,st.store_id,st.store_name,
+soi.product_id,pp.product_name,pp.model_year,so.order_date,so.order_status,so.shipped_date,
+pp.brand_id,pb.brand_name,pp.category_id,pc.category_name,
+ss.staff_id,soi.item_id,soi.quantity,soi.list_price
+from sales.order_items as soi
+left outer join sales.orders as so on soi.order_id=so.order_id
+left outer join production.stocks as ps on soi.product_id=ps.product_id
+left outer join production.products as pp on soi.product_id=pp.product_id
+left outer join production.categories as pc on pp.category_id=pc.category_id
+left outer join production.brands as pb on pp.brand_id=pb.brand_id
+left outer join sales.customers as sc on so.customer_id=sc.customer_id
+left outer join sales.staffs as ss on so.staff_id=so.staff_id
+left outer join sales.stores as st on so.store_id=st.store_id;
+
+select customer_id,first_name,last_name,
+min(order_date) as earliest_date,
+max(order_date) as latest_date
+from ss_master_bikestores_final
+group by 1,2,3
+order by 1;
+
+CREATE TABLE ss_master_bikestores_total_price AS
+SELECT *, (quantity * list_price) AS TOT_PRICE
+FROM  ss_master_bikestores_final;
+
+select * from ss_master_bikestores_total_price;
+
+CREATE TABLE ss_master_bikestores_FINAL_BUCKET_RANGE
+SELECT * , 
+   CASE 
+       WHEN  TOT_PRICE <= 5000.00   THEN 'Low'
+       WHEN  TOT_PRICE BETWEEN 5000.01 and 15000.00 THEN 'Medium'
+       ELSE 'High' 
+   END AS PRICE_BUCKET
+FROM ss_master_bikestores_total_price;
+select * from ss_master_bikestores_FINAL_BUCKET_RANGE;
